@@ -1,0 +1,419 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Gestor de Redes Sociales Local</title>
+  <style>
+    /* Reset y estilos básicos */
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      font-family: Arial, sans-serif;
+    }
+    body {
+      background: #f5f5f5;
+      color: #333;
+      padding: 20px;
+    }
+    h2 {
+      text-align: center;
+      margin-bottom: 20px;
+      color: #444;
+    }
+    form {
+      background: #fff;
+      border-radius: 8px;
+      padding: 20px;
+      margin: 10px auto;
+      max-width: 400px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    }
+    label {
+      display: block;
+      margin-bottom: 5px;
+      font-weight: bold;
+    }
+    input, textarea {
+      width: 100%;
+      padding: 10px;
+      margin-bottom: 10px;
+      border: 1px solid #ddd;
+      border-radius: 4px;
+    }
+    input[type="checkbox"] {
+      width: auto;
+      margin-right: 5px;
+    }
+    button {
+      width: 100%;
+      padding: 10px;
+      background: #007BFF;
+      border: none;
+      color: #fff;
+      border-radius: 4px;
+      font-size: 16px;
+      cursor: pointer;
+      margin-top: 10px;
+    }
+    button:hover {
+      background: #0056b3;
+    }
+    .toggle-link {
+      text-align: center;
+      margin-top: 10px;
+      color: #007BFF;
+      cursor: pointer;
+      text-decoration: underline;
+    }
+    .hidden {
+      display: none;
+    }
+    .account-card {
+      background: #fff;
+      border-radius: 8px;
+      padding: 15px;
+      margin: 10px 0;
+      box-shadow: 0 1px 4px rgba(0,0,0,0.1);
+    }
+    .account-card h3 {
+      margin-bottom: 10px;
+    }
+    .account-card p {
+      margin-bottom: 5px;
+      font-size: 14px;
+    }
+    .account-actions {
+      text-align: right;
+    }
+    .account-actions button {
+      width: auto;
+      margin-left: 5px;
+      padding: 5px 10px;
+      font-size: 14px;
+    }
+    /* Responsive: para dispositivos móviles */
+    @media (max-width: 480px) {
+      form {
+        margin: 10px 5px;
+        padding: 15px;
+      }
+      button {
+        font-size: 14px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <!-- Sección de Inicio de Sesión -->
+  <section id="login-section">
+    <h2>Iniciar Sesión</h2>
+    <form id="login-form">
+      <label for="login-username">Usuario</label>
+      <input type="text" id="login-username" required>
+      <label for="login-password">Contraseña</label>
+      <input type="password" id="login-password" required>
+      <label><input type="checkbox" id="login-show-password"> Mostrar contraseña</label>
+      <button type="submit">Ingresar</button>
+      <div class="toggle-link" id="link-to-register">¿No tienes cuenta? Regístrate</div>
+    </form>
+  </section>
+
+  <!-- Sección de Registro -->
+  <section id="register-section" class="hidden">
+    <h2>Registro</h2>
+    <form id="register-form">
+      <label for="reg-username">Usuario</label>
+      <input type="text" id="reg-username" required>
+      <label for="reg-password">Contraseña</label>
+      <input type="password" id="reg-password" required>
+      <label for="reg-password-confirm">Confirmar Contraseña</label>
+      <input type="password" id="reg-password-confirm" required>
+      <small>La contraseña debe contener al menos una letra mayúscula y un número.</small>
+      <button type="submit">Registrarse</button>
+      <div class="toggle-link" id="link-to-login">¿Ya tienes cuenta? Inicia Sesión</div>
+    </form>
+  </section>
+
+  <!-- Sección de Gestión de Cuentas -->
+  <section id="accounts-section" class="hidden">
+    <h2>Cuentas de Redes Sociales</h2>
+    <button id="logout-btn">Cerrar Sesión</button>
+    <button id="new-account-btn">Nueva Cuenta</button>
+    <div id="accounts-list"></div>
+  </section>
+
+  <!-- Sección de Formulario para Agregar/Editar Cuenta -->
+  <section id="account-form-section" class="hidden">
+    <h2 id="account-form-title">Nueva Cuenta</h2>
+    <form id="account-form">
+      <label for="acc-social">Nombre de la Red Social</label>
+      <input type="text" id="acc-social" required>
+      <label for="acc-username">Usuario/Correo</label>
+      <input type="email" id="acc-username" required>
+      <label for="acc-password">Contraseña</label>
+      <input type="text" id="acc-password" required>
+      <label for="acc-creation">Fecha de Creación (opcional)</label>
+      <input type="date" id="acc-creation">
+      <label for="acc-expiration">Fecha de Caducidad (opcional)</label>
+      <input type="date" id="acc-expiration">
+      <label for="acc-url">URL del Perfil</label>
+      <input type="url" id="acc-url" required>
+      <label for="acc-notes">Notas/Comentarios</label>
+      <textarea id="acc-notes" rows="3"></textarea>
+      <button type="submit">Guardar Cuenta</button>
+      <button type="button" id="cancel-account-btn">Cancelar</button>
+    </form>
+  </section>
+  
+  <script>
+    document.addEventListener('DOMContentLoaded', () => {
+      // Variables globales
+      let currentUser = null;
+      let editingAccountIndex = null;
+      
+      // Secciones
+      const loginSection = document.getElementById('login-section');
+      const registerSection = document.getElementById('register-section');
+      const accountsSection = document.getElementById('accounts-section');
+      const accountFormSection = document.getElementById('account-form-section');
+      
+      // Formularios y elementos
+      const loginForm = document.getElementById('login-form');
+      const registerForm = document.getElementById('register-form');
+      const accountForm = document.getElementById('account-form');
+      const accountsList = document.getElementById('accounts-list');
+      
+      // Enlaces y botones para navegación
+      const linkToRegister = document.getElementById('link-to-register');
+      const linkToLogin = document.getElementById('link-to-login');
+      const logoutBtn = document.getElementById('logout-btn');
+      const newAccountBtn = document.getElementById('new-account-btn');
+      const cancelAccountBtn = document.getElementById('cancel-account-btn');
+      const accountFormTitle = document.getElementById('account-form-title');
+      
+      // Toggle para mostrar/ocultar la contraseña en login
+      const loginShowPassword = document.getElementById('login-show-password');
+      const loginPasswordInput = document.getElementById('login-password');
+      loginShowPassword.addEventListener('change', () => {
+        loginPasswordInput.type = loginShowPassword.checked ? 'text' : 'password';
+      });
+      
+      // Función para mostrar la sección deseada y ocultar las demás
+      function showSection(section) {
+        loginSection.classList.add('hidden');
+        registerSection.classList.add('hidden');
+        accountsSection.classList.add('hidden');
+        accountFormSection.classList.add('hidden');
+        section.classList.remove('hidden');
+      }
+      
+      // Validación de contraseña: al menos una letra mayúscula y un número
+      function isValidPassword(password) {
+        return /[A-Z]/.test(password) && /\d/.test(password);
+      }
+      
+      // Funciones para gestionar usuarios en LocalStorage
+      function getUsers() {
+        return JSON.parse(localStorage.getItem('users')) || {};
+      }
+      
+      function saveUsers(users) {
+        localStorage.setItem('users', JSON.stringify(users));
+      }
+      
+      function saveUser(username, password) {
+        const users = getUsers();
+        users[username] = { password: password, accounts: [] };
+        saveUsers(users);
+      }
+      
+      function getUser(username) {
+        const users = getUsers();
+        return users[username] || null;
+      }
+      
+      function updateUser(username, data) {
+        const users = getUsers();
+        users[username] = data;
+        saveUsers(users);
+      }
+      
+      // Manejo del formulario de inicio de sesión
+      loginForm.addEventListener('submit', (e) => {
+        e.preventDefault();
+        const username = document.getElementById('login-username').value.trim();
+        const password = loginPasswordInput.value;
+        const user = getUser(username);
+        if (user && user.password === password) {
+          currentUser = username;
+          loadAccounts();
+          showSection(accountsSection);
+          loginForm.reset();
+        } else {
+          alert('Usuario o contraseña incorrectos.');
+        }
+      });
+      
+      // Manejo del formulario de registro
+      registerForm.addEventListener('submit', (e) => {
+        e.preventDefault();
+        const username = document.getElementById('reg-username').value.trim();
+        const password = document.getElementById('reg-password').value;
+        const confirmPassword = document.getElementById('reg-password-confirm').value;
+        if (password !== confirmPassword) {
+          alert('Las contraseñas no coinciden.');
+          return;
+        }
+        if (!isValidPassword(password)) {
+          alert('La contraseña debe contener al menos una letra mayúscula y un número.');
+          return;
+        }
+        if (getUser(username)) {
+          alert('El usuario ya existe.');
+          return;
+        }
+        saveUser(username, password);
+        alert('Registro exitoso. Ahora inicia sesión.');
+        registerForm.reset();
+        showSection(loginSection);
+      });
+      
+      // Enlaces para cambiar entre Login y Registro
+      linkToRegister.addEventListener('click', () => {
+        loginForm.reset();
+        showSection(registerSection);
+      });
+      linkToLogin.addEventListener('click', () => {
+        registerForm.reset();
+        showSection(loginSection);
+      });
+      
+      // Cerrar sesión
+      logoutBtn.addEventListener('click', () => {
+        currentUser = null;
+        showSection(loginSection);
+      });
+      
+      // Botón para crear una nueva cuenta
+      newAccountBtn.addEventListener('click', () => {
+        editingAccountIndex = null;
+        accountForm.reset();
+        accountFormTitle.textContent = "Nueva Cuenta";
+        showSection(accountFormSection);
+      });
+      
+      // Botón para cancelar en el formulario de cuenta
+      cancelAccountBtn.addEventListener('click', () => {
+        showSection(accountsSection);
+      });
+      
+      // Manejo del formulario para agregar/editar cuenta
+      accountForm.addEventListener('submit', (e) => {
+        e.preventDefault();
+        // Obtener valores del formulario
+        const social = document.getElementById('acc-social').value.trim();
+        const accUsername = document.getElementById('acc-username').value.trim();
+        const accPassword = document.getElementById('acc-password').value;
+        const accCreation = document.getElementById('acc-creation').value;
+        const accExpiration = document.getElementById('acc-expiration').value;
+        const accUrl = document.getElementById('acc-url').value.trim();
+        const accNotes = document.getElementById('acc-notes').value.trim();
+        
+        // Validaciones básicas
+        if (!/\S+@\S+\.\S+/.test(accUsername)) {
+          alert('Ingrese un correo válido.');
+          return;
+        }
+        if (!/^https?:\/\//i.test(accUrl)) {
+          alert('Ingrese una URL válida que comience con http:// o https://.');
+          return;
+        }
+        
+        // Crear objeto de cuenta
+        const accountData = {
+          social,
+          username: accUsername,
+          password: accPassword,
+          creationDate: accCreation,
+          expirationDate: accExpiration,
+          url: accUrl,
+          notes: accNotes
+        };
+        
+        // Actualizar el usuario actual (agregar o editar cuenta)
+        const userData = getUser(currentUser);
+        if (editingAccountIndex !== null) {
+          userData.accounts[editingAccountIndex] = accountData;
+        } else {
+          userData.accounts.push(accountData);
+        }
+        updateUser(currentUser, userData);
+        loadAccounts();
+        showSection(accountsSection);
+      });
+      
+      // Función para cargar y mostrar las cuentas almacenadas
+      function loadAccounts() {
+        accountsList.innerHTML = "";
+        const userData = getUser(currentUser);
+        if (!userData || userData.accounts.length === 0) {
+          accountsList.innerHTML = "<p>No hay cuentas registradas.</p>";
+          return;
+        }
+        userData.accounts.forEach((account, index) => {
+          const card = document.createElement('div');
+          card.classList.add('account-card');
+          card.innerHTML = `
+            <h3>${account.social}</h3>
+            <p><strong>Usuario/Correo:</strong> ${account.username}</p>
+            <p><strong>Contraseña:</strong> ${account.password}</p>
+            ${account.creationDate ? <p><strong>Creación:</strong> ${account.creationDate}</p> : ""}
+            ${account.expirationDate ? <p><strong>Caducidad:</strong> ${account.expirationDate}</p> : ""}
+            <p><strong>URL:</strong> <a href="${account.url}" target="_blank">${account.url}</a></p>
+            ${account.notes ? <p><strong>Notas:</strong> ${account.notes}</p> : ""}
+            <div class="account-actions">
+              <button class="edit-btn" data-index="${index}">Editar</button>
+              <button class="delete-btn" data-index="${index}">Eliminar</button>
+            </div>
+          `;
+          accountsList.appendChild(card);
+        });
+        
+        // Asignar eventos a los botones de editar y eliminar
+        document.querySelectorAll('.edit-btn').forEach(btn => {
+          btn.addEventListener('click', (e) => {
+            editingAccountIndex = parseInt(e.target.getAttribute('data-index'));
+            const userData = getUser(currentUser);
+            const account = userData.accounts[editingAccountIndex];
+            document.getElementById('acc-social').value = account.social;
+            document.getElementById('acc-username').value = account.username;
+            document.getElementById('acc-password').value = account.password;
+            document.getElementById('acc-creation').value = account.creationDate;
+            document.getElementById('acc-expiration').value = account.expirationDate;
+            document.getElementById('acc-url').value = account.url;
+            document.getElementById('acc-notes').value = account.notes;
+            accountFormTitle.textContent = "Editar Cuenta";
+            showSection(accountFormSection);
+          });
+        });
+        document.querySelectorAll('.delete-btn').forEach(btn => {
+          btn.addEventListener('click', (e) => {
+            const index = parseInt(e.target.getAttribute('data-index'));
+            if (confirm("¿Está seguro de eliminar esta cuenta?")) {
+              const userData = getUser(currentUser);
+              userData.accounts.splice(index, 1);
+              updateUser(currentUser, userData);
+              loadAccounts();
+            }
+          });
+        });
+      }
+      
+      // Iniciar mostrando la sección de inicio de sesión
+      showSection(loginSection);
+    });
+  </script>
+</body>
+</html>
